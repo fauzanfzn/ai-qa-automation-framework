@@ -1,0 +1,67 @@
+name: QA pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 1 * * *' # daily regression, 08:00 Jakarta time
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Official Playwright image: same browsers and fonts on every run, so visual baselines stay stable.
+    container: mcr.microsoft.com/playwright:v1.65.1-noble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run UI, visual, API and LLM suites
+        run: npx playwright test --update-snapshots=missing
+        env:
+          CI: 'true'
+          HOME: /root
+
+      - name: Commit new visual baselines (first run only)
+        if: always() && github.event_name == 'push'
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/visual/*-snapshots || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: add visual baselines [skip ci]"
+            git push
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: playwright-report
+
+  deploy-report:
+    needs: test
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

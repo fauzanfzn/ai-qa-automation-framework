@@ -1,0 +1,22 @@
+{
+  "name": "ai-qa-automation-framework",
+  "version": "1.0.0",
+  "description": "AI-driven Playwright test automation framework: UI, API, visual regression and LLM evaluation, with a QA readiness report.",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=ui",
+    "test:api": "playwright test --project=api",
+    "test:visual": "playwright test --project=visual",
+    "test:llm": "playwright test --project=llm",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "author": "Muhammad Nur Fauzan",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "^4.6.7"
+  }
+}
